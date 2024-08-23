@@ -199,49 +199,95 @@ Infoctor's design philosophy centers on creating a seamless experience for both 
 Infoctor follows a microservices architecture with multi-tenancy support, containerized using Docker and orchestrated with Kubernetes for optimal scalability and maintainability across diverse international deployments. The system leverages PostgreSQL as its primary database, utilizing its powerful structured and semi-structured data storage features.
 
 ### 4.1 High-Level Architecture Diagram
-[Insert updated high-level architecture diagram here, including components for SaaS, multi-tenancy, blockchain, and international compliance]
+![Image description](https://github.com/futureaiitofficial/infoctor/blob/main/architecture.svg)
 
 
 ### 4.2 Key Architectural Components
-- Client Layer: Web Application, Mobile App, Progressive Web App
-- API Gateway: Request routing, authentication, load balancing, and tenant identification
-- Microservices Layer: Core EHR services, specialty modules, and advanced feature services
-- Data Layer: Polyglot persistence (PostgreSQL, MongoDB, Redis) with multi-tenant data isolation
-- Blockchain Layer: Hyperledger Fabric for secure health records and consent management
-- Integration Layer: HL7 FHIR API, HL7v2 support, third-party integrations
-- Infrastructure Layer: Multi-region cloud deployment (AWS, Azure, or equivalent Indian cloud services)
-- Security Layer: IAM, encryption, audit logging, compliance monitoring
-- AI and Analytics Layer: TensorFlow, machine learning models
-- IoT Integration Layer: Device management, data ingestion, real-time processing
-- Telehealth Layer: WebRTC for real-time communication, video processing services
-- Messaging Layer: Push notification service, SMS gateway integration
-- Interoperability Layer: Support for US and Indian health information exchanges
-- Localization Layer: Multi-language support, region-specific configurations
-- Tenant Management Layer: Tenant provisioning, configuration, and management
 
-### 4.3 Key Architectural Components
+- Client Layer: 
+  - Web Application (React.js)
+  - Mobile App (React Native)
+  - Progressive Web App for offline capabilities
+  - Third-party Integrations
 
-Infoctor leverages Docker for containerization and Kubernetes for orchestration, ensuring consistency across development, testing, and production environments.
+- API Gateway: 
+  - Containerized service using Docker
+  - Handles request routing, authentication, rate limiting, and load balancing
+  - Provides a single entry point for all client requests
+  - Implemented using a tool like Kong or Netflix Zuul
 
-- Docker: Each microservice and major component is containerized using Docker, encapsulating its dependencies and environment.
-- Docker Compose: Used for local development and testing, allowing developers to run the entire system or specific components locally.
-- Kubernetes: Orchestrates the deployment, scaling, and management of Docker containers in production.
+- Microservices Layer: 
+  - Each service containerized using Docker
+  - Core EHR services: User, Patient, Appointment, Encounter, Observation, Condition, Medication, Billing
+  - Specialty modules
+  - Advanced feature services (e.g., AI-driven analytics, telemedicine)
 
-### 4.4 Container Architecture
+- Data Layer:
+  - PostgreSQL as the primary database
+    - Containerized with Docker
+    - Multi-tenant schema design
+    - JSONB support for flexible data storage (e.g., FHIR resources)
+  - Read replicas for improved read performance
+  - Connection pooling (e.g., PgBouncer) for efficient database connections
 
-- Base Images: Custom base images for Node.js and PostgreSQL, optimized for performance and security.
-- Microservice Containers: Each microservice runs in its own container, including:
-  - User Service
-  - Patient Service
-  - Appointment Service
-  - Encounter Service
-  - Billing Service
-  - etc.
-- Database Container: PostgreSQL runs in a separate container, with data persisted in volumes.
-- Cache Container: Redis for caching and session management.
-- Search Container: Elasticsearch for full-text search capabilities.
-- API Gateway Container: Handles routing and load balancing.
-- Blockchain Container: Runs Hyperledger Fabric nodes.
+- Caching Layer:
+  - Redis for distributed caching and session management
+  - Containerized and managed by Kubernetes
+
+- Search Layer:
+  - Elasticsearch for full-text search capabilities
+  - Containerized and integrated with the EHR system
+
+- Message Queue:
+  - Apache Kafka for asynchronous communication between services
+  - Enables event-driven architecture and data streaming
+  - Containerized and managed by Kubernetes
+
+- Blockchain Layer:
+  - Hyperledger Fabric for secure health records and consent management
+  - Containerized nodes managed by Kubernetes
+
+- Integration Layer:
+  - HL7 FHIR API service (containerized)
+  - Support for legacy HL7 v2 interfaces
+  - Containerized adapters for third-party integrations
+
+- Infrastructure Layer:
+  - Kubernetes for container orchestration and management
+  - Multi-region cloud deployment (AWS, Azure, or equivalent Indian cloud services)
+  - Helm for package management of Kubernetes applications
+
+- Security Layer:
+  - Identity and Access Management (IAM)
+  - Encryption services
+  - Audit logging
+  - Compliance monitoring
+  - Implemented across all containerized services
+
+- AI and Analytics Layer:
+  - Containerized TensorFlow serving for machine learning models
+  - Batch and real-time analytics processing
+
+- Storage Layer:
+  - Object storage (e.g., AWS S3 or equivalent) for large files like medical images
+  - Kubernetes persistent volumes for stateful applications
+
+- Monitoring and Logging:
+  - Prometheus for metrics collection
+  - Grafana for visualization
+  - ELK stack (Elasticsearch, Logstash, Kibana) for log aggregation and analysis
+  - All components containerized and managed by Kubernetes
+
+- CI/CD Pipeline:
+  - Jenkins or GitLab CI for automated testing and deployment
+  - Docker registry for managing container images
+  - ArgoCD for GitOps-style continuous delivery on Kubernetes
+
+- Networking:
+  - Kubernetes Ingress for managing external access to services
+  - Istio service mesh for advanced networking features and observability
+
+This architecture leverages Docker containers orchestrated by Kubernetes to provide a scalable, maintainable, and efficient system. The use of PostgreSQL as the primary database with its JSONB capabilities allows for flexible data storage while maintaining strong consistency and relational capabilities. The microservices are designed to be independently deployable and scalable, communicating via RESTful APIs and message queues.
 
 ## 5. Technology Stack
 
