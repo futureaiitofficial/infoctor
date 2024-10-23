@@ -1,47 +1,93 @@
+---
+
+# **Complete Updated Database Schema for Infoctor EHR System**
+
 ## **Table of Contents**
 
 1. [Introduction](#1-introduction)
 2. [Assumptions and Considerations](#2-assumptions-and-considerations)
-3. [Database Schema Creation Scripts](#3-database-schema-creation-scripts)
-   - 3.1 [Tenant Management](#31-tenant-management)
-   - 3.2 [User Management and RBAC](#32-user-management-and-rbac)
-   - 3.3 [Reference Tables for Code Sets](#33-reference-tables-for-code-sets)
-   - 3.4 [Patient Management](#34-patient-management)
-   - 3.5 [Appointment Scheduling](#35-appointment-scheduling)
-   - 3.6 [Clinical Documentation (FHIR Resources)](#36-clinical-documentation-fhir-resources)
-   - 3.7 [Medication and ePrescribing](#37-medication-and-eprescribing)
-   - 3.8 [Lab Orders and Results](#38-lab-orders-and-results)
-   - 3.9 [Consent Management](#39-consent-management)
-   - 3.10 [Billing and Revenue Cycle Management](#310-billing-and-revenue-cycle-management)
-   - 3.11 [Audit Logging and Provenance](#311-audit-logging-and-provenance)
-4. [Notes on Loading Code Sets](#4-notes-on-loading-code-sets)
-5. [Conclusion](#5-conclusion)
+3. [Database Schema Overview](#3-database-schema-overview)
+4. [Database Creation Scripts](#4-database-creation-scripts)
+   - 4.1 [Tenant Management](#41-tenant-management)
+   - 4.2 [User Management and RBAC](#42-user-management-and-rbac)
+   - 4.3 [Reference Tables for Coding Systems](#43-reference-tables-for-coding-systems)
+     - 4.3.1 [ICD-10 Codes](#431-icd-10-codes)
+     - 4.3.2 [CPT Codes](#432-cpt-codes)
+     - 4.3.3 [SNOMED CT Concepts](#433-snomed-ct-concepts)
+     - 4.3.4 [LOINC Codes](#434-loinc-codes)
+     - 4.3.5 [RxNorm Codes](#435-rxnorm-codes)
+   - 4.4 [Patient Management](#44-patient-management)
+   - 4.5 [Appointment Scheduling](#45-appointment-scheduling)
+   - 4.6 [Clinical Documentation](#46-clinical-documentation)
+     - 4.6.1 [Observations](#461-observations)
+     - 4.6.2 [Conditions](#462-conditions)
+     - 4.6.3 [Procedures](#463-procedures)
+     - 4.6.4 [Clinical Notes (Compositions)](#464-clinical-notes-compositions)
+   - 4.7 [Medication and ePrescribing](#47-medication-and-eprescribing)
+     - 4.7.1 [Medications](#471-medications)
+     - 4.7.2 [Medication Requests](#472-medication-requests)
+   - 4.8 [Lab Orders and Results](#48-lab-orders-and-results)
+     - 4.8.1 [Service Requests (Lab Orders)](#481-service-requests-lab-orders)
+     - 4.8.2 [Diagnostic Reports (Lab Results)](#482-diagnostic-reports-lab-results)
+   - 4.9 [Consent Management](#49-consent-management)
+   - 4.10 [Billing and Revenue Cycle Management](#410-billing-and-revenue-cycle-management)
+   - 4.11 [Audit Logging and Provenance](#411-audit-logging-and-provenance)
+   - 4.12 [FAX Integration](#412-fax-integration)
+   - 4.13 [Secure Messaging](#413-secure-messaging)
+5. [Compliance and Security Measures](#5-compliance-and-security-measures)
+6. [Data Loading Notes](#6-data-loading-notes)
+7. [Conclusion](#7-conclusion)
+8. [Next Steps](#8-next-steps)
 
 ---
 
 ## **1. Introduction**
 
-The following SQL scripts will create the necessary tables, relationships, and constraints to fulfill all the requirements for the Infoctor EHR system. This includes multi-tenancy support, user management with role-based access control (RBAC), integration of ICD-10 and other clinical coding systems, alignment with FHIR resources, and compliance with healthcare regulations.
+This updated database schema is designed to comprehensively support the Infoctor EHR system, incorporating all required features and ensuring compliance with healthcare regulations and standards. The schema includes:
+
+- **Multi-Tenancy Support**: Data isolation between tenants.
+- **User Management with RBAC**: Secure access control.
+- **Integration of Coding Systems**: ICD-10, CPT, SNOMED CT, LOINC, RxNorm.
+- **FAX Integration**: Sending and receiving faxes within the EHR.
+- **Secure Messaging**: HIPAA-compliant communication between users.
+- **FHIR Compliance**: Alignment with FHIR resources for interoperability.
+- **Audit Logging and Provenance**: Detailed logs for security and compliance.
 
 ---
 
 ## **2. Assumptions and Considerations**
 
-- **Database Management System:** PostgreSQL 13 or higher.
-- **UUIDs:** Used as primary keys for scalability and uniqueness across tenants.
-- **JSONB Fields:** Used for flexible data storage where appropriate.
-- **Compliance:** Designed to meet HIPAA, GDPR, and other regulatory requirements.
-- **ICD-10 and Other Codes:** Reference tables will be created, but actual code data must be loaded from official sources.
-- **FHIR Compliance:** Database structures align with FHIR resource definitions.
+- **Database Management System**: PostgreSQL 13 or higher.
+- **UUIDs**: Used as primary keys for uniqueness.
+- **JSONB Fields**: Employed for flexible data structures.
+- **Compliance**: Designed to meet HIPAA, GDPR, and other regulations.
+- **Coding Systems**: Reference tables are created; actual code data must be loaded from official sources.
+- **FAX and Secure Messaging**: Integrated with compliance and security in mind.
 
 ---
 
-## **3. Database Schema Creation Scripts**
+## **3. Database Schema Overview**
 
-### **3.1 Tenant Management**
+The database is organized into several key areas:
+
+1. **Tenant and User Management**: Handling multi-tenancy and user roles.
+2. **Reference Data**: Storing standard coding systems.
+3. **Clinical Data**: Managing patient records, encounters, observations, etc.
+4. **Administrative Data**: Appointments, billing, consents.
+5. **Communication**: FAX and secure messaging functionalities.
+6. **Audit and Compliance**: Logging and provenance tracking.
+
+---
+
+## **4. Database Creation Scripts**
+
+### **4.1 Tenant Management**
 
 ```sql
--- Create the tenants table
+-- Enable UUID generation extension
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Tenants table
 CREATE TABLE tenants (
     tenant_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
@@ -54,10 +100,10 @@ CREATE TABLE tenants (
 
 ---
 
-### **3.2 User Management and RBAC**
+### **4.2 User Management and RBAC**
 
 ```sql
--- Create the roles table
+-- Roles table
 CREATE TABLE roles (
     role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -66,7 +112,7 @@ CREATE TABLE roles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create the permissions table
+-- Permissions table
 CREATE TABLE permissions (
     permission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -74,14 +120,14 @@ CREATE TABLE permissions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create the role_permissions table (Many-to-Many)
+-- Role-Permissions mapping
 CREATE TABLE role_permissions (
     role_id UUID REFERENCES roles(role_id) ON DELETE CASCADE,
     permission_id UUID REFERENCES permissions(permission_id) ON DELETE CASCADE,
     PRIMARY KEY (role_id, permission_id)
 );
 
--- Create the users table
+-- Users table
 CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -101,12 +147,12 @@ CREATE TABLE users (
 
 ---
 
-### **3.3 Reference Tables for Code Sets**
+### **4.3 Reference Tables for Coding Systems**
 
-#### **ICD-10 Codes**
+#### **4.3.1 ICD-10 Codes**
 
 ```sql
--- Create the icd10_codes table
+-- ICD-10 Codes table
 CREATE TABLE icd10_codes (
     code VARCHAR(10) PRIMARY KEY,
     description TEXT NOT NULL,
@@ -118,10 +164,10 @@ CREATE TABLE icd10_codes (
 );
 ```
 
-#### **CPT Codes**
+#### **4.3.2 CPT Codes**
 
 ```sql
--- Create the cpt_codes table
+-- CPT Codes table
 CREATE TABLE cpt_codes (
     code VARCHAR(10) PRIMARY KEY,
     description TEXT NOT NULL,
@@ -131,24 +177,36 @@ CREATE TABLE cpt_codes (
 );
 ```
 
-#### **SNOMED CT Concepts**
+#### **4.3.3 SNOMED CT Concepts**
 
 ```sql
--- Create the snomed_ct_concepts table
-CREATE TABLE snomed_ct_concepts (
+-- SNOMED CT Concepts table
+CREATE TABLE snomed_concepts (
     concept_id BIGINT PRIMARY KEY,
     fully_specified_name TEXT NOT NULL,
     preferred_term TEXT,
     active BOOLEAN,
     effective_time DATE,
+    module_id BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- SNOMED CT Relationships table
+CREATE TABLE snomed_relationships (
+    relationship_id BIGINT PRIMARY KEY,
+    source_id BIGINT REFERENCES snomed_concepts(concept_id),
+    destination_id BIGINT REFERENCES snomed_concepts(concept_id),
+    relationship_group INTEGER,
+    type_id BIGINT,
+    active BOOLEAN,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
 
-#### **LOINC Codes**
+#### **4.3.4 LOINC Codes**
 
 ```sql
--- Create the loinc_codes table
+-- LOINC Codes table
 CREATE TABLE loinc_codes (
     loinc_num VARCHAR(10) PRIMARY KEY,
     component TEXT,
@@ -163,10 +221,10 @@ CREATE TABLE loinc_codes (
 );
 ```
 
-#### **RxNorm Codes**
+#### **4.3.5 RxNorm Codes**
 
 ```sql
--- Create the rxnorm_codes table
+-- RxNorm Codes table
 CREATE TABLE rxnorm_codes (
     rxcui VARCHAR(15) PRIMARY KEY,
     name TEXT NOT NULL,
@@ -177,17 +235,17 @@ CREATE TABLE rxnorm_codes (
 
 ---
 
-### **3.4 Patient Management**
+### **4.4 Patient Management**
 
 ```sql
--- Create the patients table
+-- Patients table
 CREATE TABLE patients (
     patient_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
-    identifiers JSONB, -- e.g., [{"system": "Aadhar", "value": "123456789012"}]
+    identifiers JSONB, -- E.g., [{"system": "Aadhar", "value": "123456789012"}]
     active BOOLEAN DEFAULT TRUE,
     name JSONB NOT NULL, -- FHIR HumanName structure
-    telecom JSONB, -- Contact points (phone, email)
+    telecom JSONB, -- Contact points
     gender VARCHAR(20) CHECK (gender IN ('male', 'female', 'other', 'unknown')),
     birth_date DATE,
     address JSONB, -- FHIR Address structure
@@ -198,63 +256,16 @@ CREATE TABLE patients (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Index for faster search by patient name
+-- Index on patient names
 CREATE INDEX idx_patients_name ON patients USING gin ((name) gin_trgm_ops);
-```
-
-#### **Patient Allergies (AllergyIntolerance Resource)**
-
-```sql
--- Create the allergy_intolerances table
-CREATE TABLE allergy_intolerances (
-    allergy_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    patient_id UUID REFERENCES patients(patient_id) ON DELETE CASCADE,
-    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
-    clinical_status VARCHAR(50),
-    verification_status VARCHAR(50),
-    type VARCHAR(50),
-    category VARCHAR(50),
-    criticality VARCHAR(50),
-    code JSONB, -- CodeableConcept (e.g., SNOMED CT code)
-    reaction JSONB, -- List of reactions
-    recorder_id UUID REFERENCES users(user_id),
-    recorded_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_occurrence TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-#### **Patient Problems (Condition Resource)**
-
-```sql
--- Create the conditions table
-CREATE TABLE conditions (
-    condition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    patient_id UUID REFERENCES patients(patient_id) ON DELETE CASCADE,
-    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
-    clinical_status VARCHAR(50),
-    verification_status VARCHAR(50),
-    category JSONB, -- List of categories
-    severity JSONB, -- CodeableConcept
-    code JSONB, -- CodeableConcept (e.g., ICD-10 code)
-    body_site JSONB, -- List of body sites
-    onset_date DATE,
-    abatement_date DATE,
-    recorded_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    recorder_id UUID REFERENCES users(user_id),
-    asserter_id UUID REFERENCES users(user_id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 ```
 
 ---
 
-### **3.5 Appointment Scheduling (Appointment Resource)**
+### **4.5 Appointment Scheduling**
 
 ```sql
--- Create the appointments table
+-- Appointments table
 CREATE TABLE appointments (
     appointment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -265,26 +276,26 @@ CREATE TABLE appointments (
     appointment_type JSONB, -- CodeableConcept
     start TIMESTAMP WITH TIME ZONE NOT NULL,
     end TIMESTAMP WITH TIME ZONE NOT NULL,
-    participant JSONB NOT NULL, -- List of participants (patient, practitioner)
+    participant JSONB NOT NULL, -- List of participants
     reason_code JSONB, -- List of CodeableConcepts
-    reason_reference JSONB, -- References to other resources
+    reason_reference JSONB, -- References
     comment TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Index for quick lookup of appointments
+-- Index on appointment times
 CREATE INDEX idx_appointments_start_end ON appointments (start, end);
 ```
 
 ---
 
-### **3.6 Clinical Documentation (FHIR Resources)**
+### **4.6 Clinical Documentation**
 
-#### **Observations**
+#### **4.6.1 Observations**
 
 ```sql
--- Create the observations table
+-- Observations table
 CREATE TABLE observations (
     observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -309,10 +320,62 @@ CREATE TABLE observations (
 );
 ```
 
-#### **Clinical Notes (Composition Resource)**
+#### **4.6.2 Conditions**
 
 ```sql
--- Create the compositions table
+-- Conditions table
+CREATE TABLE conditions (
+    condition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    patient_id UUID REFERENCES patients(patient_id) ON DELETE CASCADE,
+    clinical_status VARCHAR(50),
+    verification_status VARCHAR(50),
+    category JSONB, -- List of CodeableConcepts
+    severity JSONB, -- CodeableConcept
+    code JSONB NOT NULL, -- CodeableConcept (e.g., SNOMED CT code)
+    body_site JSONB, -- List of body sites
+    onset_date DATE,
+    abatement_date DATE,
+    recorded_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    recorder_id UUID REFERENCES users(user_id),
+    asserter_id UUID REFERENCES users(user_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### **4.6.3 Procedures**
+
+```sql
+-- Procedures table
+CREATE TABLE procedures (
+    procedure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    status VARCHAR(50) CHECK (status IN ('preparation', 'in-progress', 'not-done', 'on-hold', 'stopped', 'completed', 'entered-in-error', 'unknown')) NOT NULL,
+    category JSONB, -- CodeableConcept
+    code JSONB NOT NULL, -- CodeableConcept (e.g., CPT code)
+    subject_id UUID REFERENCES patients(patient_id) ON DELETE CASCADE,
+    encounter_id UUID, -- Reference to an encounter
+    performed_datetime TIMESTAMP WITH TIME ZONE,
+    performer JSONB, -- List of performers
+    reason_code JSONB, -- List of CodeableConcepts
+    body_site JSONB, -- List of body sites
+    outcome JSONB, -- CodeableConcept
+    report JSONB, -- References to diagnostic reports
+    complication JSONB, -- List of CodeableConcepts
+    follow_up JSONB, -- List of CodeableConcepts
+    note JSONB, -- List of annotations
+    focal_device JSONB, -- List of devices
+    used_reference JSONB, -- References to resources
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### **4.6.4 Clinical Notes (Compositions)**
+
+```sql
+-- Compositions table
 CREATE TABLE compositions (
     composition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -335,12 +398,12 @@ CREATE TABLE compositions (
 
 ---
 
-### **3.7 Medication and ePrescribing (MedicationRequest and Medication Resources)**
+### **4.7 Medication and ePrescribing**
 
-#### **Medications**
+#### **4.7.1 Medications**
 
 ```sql
--- Create the medications table
+-- Medications table
 CREATE TABLE medications (
     medication_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -356,10 +419,10 @@ CREATE TABLE medications (
 );
 ```
 
-#### **Medication Requests (Prescriptions)**
+#### **4.7.2 Medication Requests**
 
 ```sql
--- Create the medication_requests table
+-- Medication Requests table
 CREATE TABLE medication_requests (
     medication_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -383,12 +446,12 @@ CREATE TABLE medication_requests (
 
 ---
 
-### **3.8 Lab Orders and Results (ServiceRequest and DiagnosticReport Resources)**
+### **4.8 Lab Orders and Results**
 
-#### **Service Requests (Lab Orders)**
+#### **4.8.1 Service Requests (Lab Orders)**
 
 ```sql
--- Create the service_requests table
+-- Service Requests table
 CREATE TABLE service_requests (
     service_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -410,10 +473,10 @@ CREATE TABLE service_requests (
 );
 ```
 
-#### **Diagnostic Reports (Lab Results)**
+#### **4.8.2 Diagnostic Reports (Lab Results)**
 
 ```sql
--- Create the diagnostic_reports table
+-- Diagnostic Reports table
 CREATE TABLE diagnostic_reports (
     diagnostic_report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -438,10 +501,10 @@ CREATE TABLE diagnostic_reports (
 
 ---
 
-### **3.9 Consent Management (Consent Resource)**
+### **4.9 Consent Management**
 
 ```sql
--- Create the consents table
+-- Consents table
 CREATE TABLE consents (
     consent_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -461,12 +524,10 @@ CREATE TABLE consents (
 
 ---
 
-### **3.10 Billing and Revenue Cycle Management**
-
-#### **Billing Records**
+### **4.10 Billing and Revenue Cycle Management**
 
 ```sql
--- Create the billing_records table
+-- Billing Records table
 CREATE TABLE billing_records (
     billing_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -482,11 +543,11 @@ CREATE TABLE billing_records (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create the billing_items table
+-- Billing Items table
 CREATE TABLE billing_items (
     billing_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     billing_id UUID REFERENCES billing_records(billing_id) ON DELETE CASCADE,
-    code VARCHAR(10), -- Reference to code tables
+    code VARCHAR(10), -- References code tables
     code_type VARCHAR(10) CHECK (code_type IN ('ICD-10', 'CPT', 'HCPCS')),
     description TEXT,
     charge_amount NUMERIC(12,2) DEFAULT 0.00,
@@ -497,12 +558,12 @@ CREATE TABLE billing_items (
 
 ---
 
-### **3.11 Audit Logging and Provenance**
+### **4.11 Audit Logging and Provenance**
 
-#### **Audit Logs (AuditEvent Resource)**
+#### **Audit Events**
 
 ```sql
--- Create the audit_events table
+-- Audit Events table
 CREATE TABLE audit_events (
     audit_event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
@@ -510,11 +571,11 @@ CREATE TABLE audit_events (
     subtype JSONB, -- List of CodeableConcepts
     action VARCHAR(10) CHECK (action IN ('C', 'R', 'U', 'D', 'E')), -- Create, Read, Update, Delete, Execute
     recorded TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    outcome VARCHAR(50), -- Success, minor failure, serious failure, major failure
+    outcome VARCHAR(50), -- Success, minor failure, etc.
     outcome_desc TEXT,
     agent JSONB NOT NULL, -- User details
     source JSONB NOT NULL, -- System details
-    entity JSONB, -- Details of the entity involved
+    entity JSONB, -- Entity involved
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
@@ -522,7 +583,7 @@ CREATE TABLE audit_events (
 #### **Provenance**
 
 ```sql
--- Create the provenance table
+-- Provenance table
 CREATE TABLE provenance (
     provenance_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     target JSONB NOT NULL, -- References to resources
@@ -536,56 +597,111 @@ CREATE TABLE provenance (
 
 ---
 
-## **4. Notes on Loading Code Sets**
+### **4.12 FAX Integration**
 
-- **ICD-10 Codes:** The `icd10_codes` table should be populated with the official ICD-10 code set, which can be obtained from authorized sources like the World Health Organization (WHO) or national health agencies.
-- **CPT Codes:** Obtain the CPT code set from the American Medical Association (AMA) or authorized distributors.
-- **SNOMED CT Concepts:** SNOMED CT is distributed by SNOMED International and may require a license.
-- **LOINC Codes:** LOINC codes are available from the Regenstrief Institute.
-- **RxNorm Codes:** RxNorm data can be downloaded from the U.S. National Library of Medicine.
-
-**Loading Data Example:**
+#### **Documents**
 
 ```sql
--- Example of inserting an ICD-10 code
-INSERT INTO icd10_codes (code, description, chapter, block, is_billable, effective_date)
-VALUES ('A00', 'Cholera', 'I. Certain infectious and parasitic diseases', 'A00-A09', TRUE, '2021-10-01');
+-- Documents table
+CREATE TABLE documents (
+    document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    patient_id UUID REFERENCES patients(patient_id) ON DELETE SET NULL,
+    file_name VARCHAR(255),
+    file_type VARCHAR(100),
+    file_size INTEGER,
+    content BYTEA, -- Alternatively, store file paths
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
 
-*Note: Bulk loading methods (e.g., COPY command, ETL tools) should be used for large datasets.*
+#### **FAX Queue**
+
+```sql
+-- FAX Queue table
+CREATE TABLE fax_queue (
+    fax_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    document_id UUID REFERENCES documents(document_id) ON DELETE CASCADE,
+    recipient_number VARCHAR(20),
+    status VARCHAR(50) CHECK (status IN ('pending', 'sent', 'failed')) DEFAULT 'pending',
+    attempts INTEGER DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
 ---
 
-## **5. Conclusion**
+### **4.13 Secure Messaging**
 
-The provided SQL scripts create a comprehensive database schema for the Infoctor EHR system, addressing all the requirements, including:
+```sql
+-- Messages table
+CREATE TABLE messages (
+    message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    sender_id UUID,
+    recipient_id UUID,
+    subject VARCHAR(255),
+    body TEXT,
+    attachments JSONB,
+    is_read BOOLEAN DEFAULT FALSE,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (recipient_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+```
 
-- **Multi-Tenancy Support:** Ensuring data isolation between tenants.
-- **User Management and RBAC:** Secure access control mechanisms.
-- **Integration of Code Sets:** Tables for ICD-10, CPT, SNOMED CT, LOINC, and RxNorm codes.
-- **FHIR Compliance:** Aligning database structures with FHIR resource definitions for interoperability.
-- **Clinical Documentation:** Support for detailed clinical data capture.
-- **Consent Management:** Recording patient consents in compliance with regulations.
-- **Audit Logging and Provenance:** Maintaining detailed logs for security and compliance.
-- **Compliance and Security Measures:** Designed to meet HIPAA, GDPR, and other regulatory standards.
+---
+
+## **5. Compliance and Security Measures**
+
+- **Encryption**: Use encryption at rest and in transit (e.g., SSL/TLS for connections).
+- **Access Control**: Implement role-based access control and fine-grained permissions.
+- **Audit Trails**: Maintain detailed logs of all access and actions.
+- **Data Isolation**: Enforce tenant-level data isolation using schemas or row-level security.
+- **Data Retention Policies**: Define policies for data archiving and deletion.
+- **Regular Updates**: Keep coding systems and software up to date.
+- **Disaster Recovery**: Implement robust backup and recovery procedures.
+- **Business Associate Agreements**: Ensure compliance when using third-party services.
 
 ---
 
-**Next Steps:**
+## **6. Data Loading Notes**
 
-1. **Implement the Database:**
-   - Execute the SQL scripts in a PostgreSQL environment.
-2. **Load Code Sets:**
-   - Populate the reference tables with official code data.
-3. **Develop API Layer:**
-   - Build FHIR-compliant APIs to interface with the database.
-4. **Implement Business Logic:**
-   - Develop application layers to handle workflows and data processing.
-5. **Testing:**
-   - Perform thorough testing, including unit, integration, and security testing.
-6. **Deployment:**
-   - Deploy the system in a secure, compliant infrastructure.
-
-**Please note** that this schema serves as a foundation. Additional indexes, constraints, or optimizations may be necessary based on specific use cases and performance considerations.
+- **Official Sources**: Load code sets from official releases (e.g., WHO for ICD-10, AMA for CPT).
+- **Licensing**: Be aware of licensing requirements for code sets like SNOMED CT and CPT.
+- **Bulk Loading**: Use efficient methods (e.g., `COPY` command) for large datasets.
+- **Data Validation**: Verify data integrity after loading.
 
 ---
+
+## **7. Conclusion**
+
+This comprehensive database schema integrates all required functionalities for the Infoctor EHR system, ensuring that:
+
+- **Clinical Coding Systems** are fully integrated for interoperability and compliance.
+- **FAX Integration** and **Secure Messaging** functionalities are implemented for efficient communication.
+- **Compliance and Security** measures are embedded in the design.
+- **FHIR Standards** are followed for resource structures to facilitate interoperability.
+
+---
+
+## **8. Next Steps**
+
+1. **Implement the Schema**: Execute the SQL scripts in a PostgreSQL environment.
+2. **Load Reference Data**: Populate coding system tables with official data.
+3. **Develop Application Logic**: Build the application layers that interact with the database.
+4. **Implement APIs**: Develop FHIR-compliant APIs for data exchange.
+5. **Integrate Third-Party Services**: Set up FAX and secure messaging services.
+6. **Testing**: Conduct thorough testing, including security and compliance checks.
+7. **Deployment**: Deploy the system in a secure, compliant infrastructure.
+8. **Training and Documentation**: Prepare user guides and training materials.
+
+---
+
+**Feel free to reach out if you need further assistance with implementation details, optimization strategies, or any other aspect of the database design.**
